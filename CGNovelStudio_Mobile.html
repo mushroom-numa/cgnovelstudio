@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<!--
+  CG Novel Studio Mobile
+  Version: 0.3.0
+  Last updated: 2026-05-12
+  外出先でスマホからセリフ案を入力 → PCのCG Novel Studioへ貼り付け取り込みする想定の入力専用ツール。
+-->
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#eeecea">
+<title>CG Novel Studio Mobile</title>
+<style>
+:root {
+  --bg: #f5f4f0;
+  --bg-elev: #eeecea;
+  --bg-panel: #fff;
+  --text: #1a1a1a;
+  --text-sub: #666;
+  --text-mute: #888;
+  --line: #ddd;
+  --line-strong: #ccc;
+  --accent: #2a5a90;
+  --accent-soft: #7a9cc0;
+  --accent-bg: #eef4fb;
+
+  /* PC版に揃えたエントリ色 */
+  --serif-bg: #fff;
+  --serif-border: #ddd;
+  --serif-text: #1a1a1a;
+  --serif-tag-bg: #eeecea;
+  --serif-tag-text: #666;
+
+  --mono-bg: #fffbf0;
+  --mono-border: #ddc860;
+  --mono-text: #7a5800;
+  --mono-tag-bg: #fef3c8;
+  --mono-tag-text: #7a5800;
+
+  --memo-bg: #f0f5fb;
+  --memo-border: #90b8d8;
+  --memo-text: #2a5a8a;
+  --memo-tag-bg: #c8dff2;
+  --memo-tag-text: #2a5a8a;
+
+  --pm: #888;
+  --danger: #c0392b;
+  --danger-bg: #fdf0f0;
+  --ok: #2a5a2a;
+  --ok-bg: #e8f0e8;
+  --shadow: 0 6px 22px rgba(0,0,0,.12);
+  --font-base: 16px;
+}
+[data-theme="dark"] {
+  --bg: #1a1a1c;
+  --bg-elev: #232326;
+  --bg-panel: #2a2a2e;
+  --text: #e8e8e8;
+  --text-sub: #b0b0b0;
+  --text-mute: #8a8a8a;
+  --line: #3a3a3e;
+  --line-strong: #4a4a4e;
+  --accent: #9ec0e8;
+  --accent-soft: #6a8cb0;
+  --accent-bg: #2a3a4a;
+
+  --serif-bg: #2a2a2e;
+  --serif-border: #4a4a4e;
+  --serif-text: #e8e8e8;
+  --serif-tag-bg: #1a1a1c;
+  --serif-tag-text: #b0b0b0;
+
+  --mono-bg: #2f2a1c;
+  --mono-border: #8a6f30;
+  --mono-text: #e8c87a;
+  --mono-tag-bg: #4a3a18;
+  --mono-tag-text: #e8c87a;
+
+  --memo-bg: #1c2530;
+  --memo-border: #4a6e90;
+  --memo-text: #a8c8e8;
+  --memo-tag-bg: #2a3a4a;
+  --memo-tag-text: #a8c8e8;
+
+  --pm: #999;
+  --danger: #e8746a;
+  --danger-bg: #4a2828;
+  --ok: #a8d4a8;
+  --ok-bg: #2a4028;
+}
+[data-fontsize="s"] { --font-base: 14px; }
+[data-fontsize="m"] { --font-base: 16px; }
+[data-fontsize="l"] { --font-base: 18px; }
+
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: 'Segoe UI','Hiragino Sans','Yu Gothic UI',system-ui,sans-serif;
+  font-size: var(--font-base);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+input, textarea, button, select { font-family: inherit; font-size: inherit; color: inherit; }
+input, textarea {
+  border: 1.5px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: var(--bg-panel);
+  outline: none;
+  width: 100%;
+}
+input:focus, textarea:focus {
+  border-color: var(--accent-soft);
+  box-shadow: 0 0 0 2px rgba(122,156,192,.25);
+}
+button {
+  cursor: pointer;
+  border-radius: 6px;
+  border: 1.5px solid var(--line-strong);
+  background: var(--bg-panel);
+  color: var(--text);
+  padding: 8px 12px;
+  line-height: 1.3;
+  min-height: 36px;
+  transition: background .1s, border-color .1s;
+}
+button:active { background: var(--bg-elev); }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 3px; }
+
+#app { display: flex; flex-direction: column; height: 100dvh; height: 100vh; }
+
+/* Header */
+#hd {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  background: var(--bg-elev);
+  border-bottom: 1.5px solid var(--line);
+  padding: 0 12px;
+  gap: 8px;
+  padding-top: env(safe-area-inset-top);
+  height: calc(48px + env(safe-area-inset-top));
+}
+.app-ttl { font-size: 15px; font-weight: 700; color: var(--accent); letter-spacing: .05em; flex-shrink: 0; }
+.proj-name {
+  flex: 1; min-width: 0;
+  font-size: 13px; color: var(--text-sub);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  text-align: right; padding-right: 4px;
+  display: flex; align-items: center; justify-content: flex-end; gap: 6px;
+}
+.count-badge {
+  font-size: 11px; padding: 2px 7px; border-radius: 10px;
+  background: var(--accent); color: #fff; font-weight: 700; flex-shrink: 0;
+}
+.count-badge.zero { background: var(--line); color: var(--text-mute); }
+[data-theme="dark"] .count-badge { color: #1a1a1c; }
+[data-theme="dark"] .count-badge.zero { color: var(--text-mute); }
+.hd-btn {
+  flex-shrink: 0;
+  min-width: 40px; min-height: 36px; font-size: 18px;
+  background: transparent; border: 1.5px solid transparent;
+}
+.hd-btn:active { background: var(--bg); border-color: var(--line-strong); }
+
+/* List */
+#list-wrap {
+  flex: 1; overflow-y: auto; padding: 10px 10px 14px;
+  -webkit-overflow-scrolling: touch;
+}
+.empty {
+  text-align: center; color: var(--text-mute);
+  font-size: 13px; padding: 40px 20px; line-height: 1.8;
+}
+.entry {
+  border-radius: 8px; padding: 8px 10px; margin-bottom: 8px;
+  position: relative; border: 1.5px solid;
+}
+.entry.serif { background: var(--serif-bg); border-color: var(--serif-border); color: var(--serif-text); }
+.entry.mono  { background: var(--mono-bg);  border-color: var(--mono-border);  color: var(--mono-text); }
+.entry.memo  { background: var(--memo-bg);  border-color: var(--memo-border);  color: var(--memo-text); }
+.entry-hd { display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 4px; }
+.entry-char { font-weight: 700; font-size: 13px; }
+.entry.serif .entry-char { color: var(--accent); }
+.entry.mono  .entry-char { color: var(--mono-text); }
+.entry-char.none { font-weight: 500; font-style: italic; color: var(--text-mute); }
+.entry-type { font-size: 11px; padding: 1px 6px; border-radius: 3px; font-weight: 600; }
+.entry.serif .entry-type { background: var(--serif-tag-bg); color: var(--serif-tag-text); }
+.entry.mono  .entry-type { background: var(--mono-tag-bg);  color: var(--mono-tag-text); }
+.entry.memo  .entry-type { background: var(--memo-tag-bg);  color: var(--memo-tag-text); }
+.entry-actions { margin-left: auto; display: flex; gap: 2px; }
+.entry-actions button {
+  min-width: 32px; min-height: 30px; padding: 2px 6px;
+  font-size: 13px; background: transparent;
+  border: 1px solid transparent; color: var(--text-mute);
+}
+.entry-actions button:active { background: var(--bg-elev); border-color: var(--line-strong); }
+.entry-text {
+  font-size: var(--font-base); line-height: 1.55;
+  white-space: pre-wrap; word-break: break-word;
+}
+.entry-text.editing {
+  outline: 2px solid var(--accent-soft);
+  border-radius: 4px; padding: 2px 4px; background: var(--bg);
+}
+.entry-text textarea {
+  width: 100%; resize: vertical; min-height: 60px;
+  font-size: var(--font-base); line-height: 1.55; color: var(--text);
+}
+.entry.pm {
+  background: transparent; border: none;
+  border-top: 1.5px dashed var(--line-strong);
+  border-bottom: 1.5px dashed var(--line-strong);
+  border-radius: 0; text-align: center; padding: 6px;
+  color: var(--pm); font-size: 12px; letter-spacing: .12em; position: relative;
+}
+.entry.pm .entry-actions { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); }
+
+/* Bottom panel */
+#bot {
+  flex-shrink: 0;
+  background: var(--bg-elev);
+  border-top: 1.5px solid var(--line);
+  padding: 6px 10px;
+  padding-bottom: calc(6px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 5px;
+}
+
+/* Word chips (input assist) */
+.word-row { display: flex; gap: 5px; align-items: flex-start; }
+.word-row-inner {
+  flex: 1; display: flex; gap: 4px;
+  overflow-x: auto; flex-wrap: nowrap;
+  -webkit-overflow-scrolling: touch; scrollbar-width: thin;
+  min-height: 30px;
+}
+.word-row-inner.expanded {
+  flex-wrap: wrap; overflow-x: visible;
+  max-height: 120px; overflow-y: auto;
+}
+.word-chip {
+  flex-shrink: 0; padding: 4px 9px; border-radius: 4px;
+  border: 1px solid var(--line-strong); background: var(--bg-panel);
+  color: var(--text-sub); font-size: 12px;
+  min-height: 28px; white-space: nowrap;
+}
+.word-chip:active { background: var(--accent-bg); border-color: var(--accent-soft); color: var(--accent); }
+.word-toggle {
+  flex-shrink: 0; min-width: 30px; min-height: 28px;
+  padding: 2px 6px; font-size: 12px;
+  background: var(--bg-panel); color: var(--text-mute);
+}
+.word-empty {
+  flex: 1; font-size: 11px; color: var(--text-mute);
+  padding: 6px 4px; line-height: 1.3;
+}
+
+/* Char chips */
+.chip-row {
+  display: flex; gap: 5px;
+  overflow-x: auto; padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch; scrollbar-width: thin;
+}
+.chip {
+  flex-shrink: 0; padding: 5px 11px; border-radius: 16px;
+  border: 1.5px solid var(--line-strong); background: var(--bg-panel);
+  color: var(--text-sub); font-size: 13px; font-weight: 600;
+  min-height: 30px; white-space: nowrap;
+}
+.chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+[data-theme="dark"] .chip.on { color: #1a1a1c; }
+.chip.none { font-style: italic; font-weight: 500; }
+.chip.add { color: var(--text-mute); font-weight: 400; border-style: dashed; }
+
+/* Type buttons */
+.type-row { display: flex; gap: 5px; }
+.type-btn {
+  flex: 1; padding: 6px 4px; font-size: 13px; font-weight: 600;
+  background: var(--bg-panel); color: var(--text-sub); min-height: 34px;
+}
+.type-btn[data-type="serif"].on { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+.type-btn[data-type="mono"].on  { background: var(--mono-bg);   border-color: var(--mono-border); color: var(--mono-text); }
+.type-btn[data-type="memo"].on  { background: var(--memo-bg);   border-color: var(--memo-border); color: var(--memo-text); }
+
+/* Input */
+.in-row { display: flex; gap: 6px; align-items: stretch; }
+#in-text {
+  flex: 1; min-height: 52px; max-height: 140px;
+  resize: none; line-height: 1.5; padding: 7px 10px;
+}
+.in-side { display: flex; flex-direction: column; gap: 4px; width: 76px; flex-shrink: 0; }
+.add-btn {
+  flex: 1; background: var(--accent); border-color: var(--accent);
+  color: #fff; font-weight: 700; font-size: 14px;
+}
+[data-theme="dark"] .add-btn { color: #1a1a1c; }
+.add-btn:active { background: var(--accent-soft); border-color: var(--accent-soft); }
+.pm-btn {
+  background: var(--bg-panel); font-size: 11px; padding: 4px;
+  min-height: 28px; color: var(--text-sub);
+}
+
+/* Action bar */
+.act-row { display: flex; gap: 6px; margin-top: 1px; }
+.act-btn {
+  flex: 1; font-size: 12px; padding: 5px; min-height: 30px;
+  background: var(--bg-panel); color: var(--text-sub);
+}
+.act-btn.primary {
+  background: var(--ok-bg); border-color: var(--ok);
+  color: var(--ok); font-weight: 600;
+}
+
+/* Modal */
+.mask {
+  position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 100;
+  display: flex; align-items: flex-end; justify-content: center; padding: 0;
+}
+.modal {
+  background: var(--bg); width: 100%;
+  max-height: 92dvh; max-height: 92vh;
+  border-radius: 12px 12px 0 0;
+  display: flex; flex-direction: column;
+  box-shadow: var(--shadow); overflow: hidden;
+}
+.modal-hd {
+  flex-shrink: 0; padding: 12px 14px;
+  border-bottom: 1.5px solid var(--line); background: var(--bg-elev);
+  display: flex; align-items: center; gap: 8px;
+}
+.modal-ttl { font-size: 15px; font-weight: 700; color: var(--accent); flex: 1; }
+.modal-close {
+  min-width: 36px; min-height: 36px;
+  background: transparent; border: 1.5px solid transparent; font-size: 18px;
+}
+.modal-body {
+  flex: 1; overflow-y: auto; padding: 14px;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
+}
+.sec { margin-bottom: 18px; }
+.sec-ttl {
+  font-size: 12px; font-weight: 700; letter-spacing: .08em;
+  color: var(--text-mute); margin-bottom: 8px; text-transform: uppercase;
+}
+.sec-desc {
+  font-size: 12px; color: var(--text-mute);
+  margin-bottom: 8px; line-height: 1.5;
+}
+.set-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+.set-row label { flex: 1; font-size: 14px; color: var(--text-sub); }
+.set-row select, .set-row input[type="text"] {
+  flex: 0 0 auto; width: auto; min-width: 100px; padding: 6px 8px;
+}
+.set-row input[type="text"].wide { flex: 1; }
+
+/* Char/Word manage */
+.item-list { display: flex; flex-direction: column; gap: 4px; }
+.item-row {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg-panel); border: 1.5px solid var(--line);
+  border-radius: 6px; padding: 6px 8px;
+}
+.item-row input {
+  flex: 1; padding: 4px 6px;
+  border: 1px solid transparent; background: transparent;
+}
+.item-row input:focus { border-color: var(--accent-soft); background: var(--bg); }
+.item-btn {
+  min-width: 32px; min-height: 32px; padding: 4px; font-size: 13px;
+  background: transparent; border: 1px solid transparent; color: var(--text-mute);
+}
+.item-btn:active { background: var(--bg-elev); border-color: var(--line-strong); }
+.item-btn.del { color: var(--danger); }
+.add-item { margin-top: 6px; display: flex; gap: 6px; }
+.add-item input { flex: 1; }
+.add-item button {
+  background: var(--ok-bg); border-color: var(--ok);
+  color: var(--ok); font-weight: 600; flex-shrink: 0;
+}
+
+/* Toast */
+.toast {
+  position: fixed; left: 50%;
+  bottom: calc(140px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  background: rgba(20,20,20,.92); color: #fff;
+  padding: 9px 18px; border-radius: 22px; font-size: 13px;
+  z-index: 1000; box-shadow: 0 6px 18px rgba(0,0,0,.3);
+  pointer-events: none; animation: toast-in .2s ease;
+}
+.toast.danger { background: rgba(192,57,43,.95); }
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* Confirm */
+.conf {
+  background: var(--bg-panel); border-radius: 12px;
+  margin: 14px; width: calc(100% - 28px); max-width: 360px;
+  padding: 16px; align-self: center;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.conf-ttl { font-size: 15px; font-weight: 700; color: var(--text); }
+.conf-msg { font-size: 13px; color: var(--text-sub); line-height: 1.6; }
+.conf-ft { display: flex; gap: 8px; justify-content: flex-end; }
+.conf-ft button { min-width: 80px; }
+.conf-ft .go { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+[data-theme="dark"] .conf-ft .go { color: #1a1a1c; }
+.conf-ft .danger { background: var(--danger); border-color: var(--danger); color: #fff; font-weight: 600; }
+.mask.center { align-items: center; }
+
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <header id="hd">
+    <div class="app-ttl">CGNS Mobile</div>
+    <div class="proj-name">
+      <span id="proj-name">プロジェクト</span>
+      <span class="count-badge zero" id="count-badge">0</span>
+    </div>
+    <button class="hd-btn" id="btn-settings" title="設定">⚙</button>
+  </header>
+
+  <div id="list-wrap">
+    <div id="list"></div>
+  </div>
+
+  <div id="bot">
+    <div class="word-row">
+      <div class="word-row-inner" id="word-row"></div>
+      <button class="word-toggle" id="word-toggle" title="展開／折りたたみ">▼</button>
+    </div>
+    <div class="chip-row" id="chip-row"></div>
+    <div class="type-row">
+      <button class="type-btn on" data-type="serif">セリフ</button>
+      <button class="type-btn"    data-type="mono">心の声</button>
+      <button class="type-btn"    data-type="memo">メモ</button>
+    </div>
+    <div class="in-row">
+      <textarea id="in-text" placeholder="本文を入力…" rows="2"></textarea>
+      <div class="in-side">
+        <button class="add-btn" id="btn-add">追加</button>
+        <button class="pm-btn"  id="btn-pm">改ページ</button>
+      </div>
+    </div>
+    <div class="act-row">
+      <button class="act-btn primary" id="btn-copy">コピー</button>
+      <button class="act-btn" id="btn-clear">クリア</button>
+    </div>
+  </div>
+
+</div>
+
+<div id="modal-root"></div>
+
+<script>
+'use strict';
+
+/* ────────── State ────────── */
+const SK = 'cgns_mobile_v1';
+
+const DEFAULT_STATE = {
+  projectName: 'プロジェクト',
+  chars: [],
+  words: [],
+  entries: [],
+  activeChar: '',
+  activeType: 'serif',
+  wordsExpanded: false,
+  settings: {
+    theme: 'light',
+    fontSize: 'm',
+    clearAfterCopy: 'ask',
+  },
+};
+
+let S = JSON.parse(JSON.stringify(DEFAULT_STATE));
+
+function save() { try { localStorage.setItem(SK, JSON.stringify(S)); } catch(e){} }
+function load() {
+  try {
+    const raw = localStorage.getItem(SK);
+    if (raw) {
+      const d = JSON.parse(raw);
+      if (d) {
+        S = {
+          ...DEFAULT_STATE,
+          ...d,
+          settings: { ...DEFAULT_STATE.settings, ...(d.settings || {}) },
+          entries: Array.isArray(d.entries) ? d.entries : [],
+          chars:   Array.isArray(d.chars)   ? d.chars   : [],
+          words:   Array.isArray(d.words)   ? d.words   : [],
+        };
+        delete S.settings.monoStyle;
+        delete S.settings.pmStyle;
+      }
+    }
+  } catch(e){}
+}
+function uid() { return Math.random().toString(36).slice(2,10); }
+
+/* ────────── Render ────────── */
+function applyTheme() {
+  document.body.dataset.theme    = S.settings.theme;
+  document.body.dataset.fontsize = S.settings.fontSize;
+}
+
+function render() {
+  document.getElementById('proj-name').textContent = S.projectName || 'プロジェクト';
+  const badge = document.getElementById('count-badge');
+  const n = S.entries.length;
+  badge.textContent = n;
+  badge.classList.toggle('zero', n === 0);
+
+  renderWordRow();
+  renderCharRow();
+
+  document.querySelectorAll('.type-btn').forEach(b => {
+    b.classList.toggle('on', b.dataset.type === S.activeType);
+  });
+
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  if (S.entries.length === 0) {
+    const e = document.createElement('div');
+    e.className = 'empty';
+    e.innerHTML = 'まだエントリがありません。<br>下のパネルから入力してください。';
+    list.appendChild(e);
+  } else {
+    S.entries.forEach((entry, idx) => list.appendChild(renderEntry(entry, idx)));
+  }
+}
+
+function renderWordRow() {
+  const row = document.getElementById('word-row');
+  const toggle = document.getElementById('word-toggle');
+  row.innerHTML = '';
+  row.classList.toggle('expanded', S.wordsExpanded);
+  toggle.textContent = S.wordsExpanded ? '▲' : '▼';
+
+  if (S.words.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'word-empty';
+    empty.textContent = '単語登録なし（設定から追加できます）';
+    row.appendChild(empty);
+    return;
+  }
+
+  for (const w of S.words) {
+    const b = document.createElement('button');
+    b.className = 'word-chip';
+    b.textContent = w;
+    b.onclick = () => insertWordAtCursor(w);
+    row.appendChild(b);
+  }
+}
+
+function renderCharRow() {
+  const chipRow = document.getElementById('chip-row');
+  chipRow.innerHTML = '';
+
+  const noneChip = document.createElement('button');
+  noneChip.className = 'chip none' + (S.activeChar === '' ? ' on' : '');
+  noneChip.textContent = 'なし';
+  noneChip.onclick = () => { S.activeChar = ''; save(); render(); };
+  chipRow.appendChild(noneChip);
+
+  for (const name of S.chars) {
+    const b = document.createElement('button');
+    b.className = 'chip' + (name === S.activeChar ? ' on' : '');
+    b.textContent = name;
+    b.onclick = () => { S.activeChar = name; save(); render(); };
+    chipRow.appendChild(b);
+  }
+
+  const add = document.createElement('button');
+  add.className = 'chip add';
+  add.textContent = '＋';
+  add.title = '話者を追加';
+  add.onclick = () => openSettings('chars');
+  chipRow.appendChild(add);
+}
+
+function renderEntry(entry, idx) {
+  const el = document.createElement('div');
+  el.className = 'entry ' + entry.type;
+  el.dataset.id = entry.id;
+
+  if (entry.type === 'pm') {
+    el.innerHTML = `<span>─── 改ページ ───</span>`;
+    el.appendChild(renderActions(entry, idx));
+    return el;
+  }
+
+  const hd = document.createElement('div');
+  hd.className = 'entry-hd';
+  if (entry.type === 'serif' || entry.type === 'mono') {
+    const c = document.createElement('span');
+    if (entry.char) {
+      c.className = 'entry-char';
+      c.textContent = entry.char;
+    } else {
+      c.className = 'entry-char none';
+      c.textContent = '(話者なし)';
+    }
+    hd.appendChild(c);
+  }
+  const t = document.createElement('span');
+  t.className = 'entry-type';
+  t.textContent = entry.type === 'serif' ? 'セリフ' :
+                  entry.type === 'mono'  ? '心の声' : 'メモ';
+  hd.appendChild(t);
+  hd.appendChild(renderActions(entry, idx));
+  el.appendChild(hd);
+
+  const body = document.createElement('div');
+  body.className = 'entry-text';
+  body.textContent = entry.text || '';
+  body.onclick = () => startEdit(entry.id);
+  el.appendChild(body);
+
+  return el;
+}
+
+function renderActions(entry, idx) {
+  const wrap = document.createElement('div');
+  wrap.className = 'entry-actions';
+
+  const up = document.createElement('button');
+  up.textContent = '▲';
+  up.title = '上へ';
+  up.onclick = (e) => { e.stopPropagation(); moveEntry(idx, -1); };
+  up.disabled = idx === 0;
+  if (up.disabled) up.style.opacity = '.3';
+  wrap.appendChild(up);
+
+  const down = document.createElement('button');
+  down.textContent = '▼';
+  down.title = '下へ';
+  down.onclick = (e) => { e.stopPropagation(); moveEntry(idx, 1); };
+  down.disabled = idx === S.entries.length - 1;
+  if (down.disabled) down.style.opacity = '.3';
+  wrap.appendChild(down);
+
+  const del = document.createElement('button');
+  del.textContent = '×';
+  del.title = '削除';
+  del.style.color = 'var(--danger)';
+  del.onclick = (e) => { e.stopPropagation(); deleteEntry(entry.id); };
+  wrap.appendChild(del);
+
+  return wrap;
+}
+
+function startEdit(entryId) {
+  const entry = S.entries.find(e => e.id === entryId);
+  if (!entry || entry.type === 'pm') return;
+  const el = document.querySelector(`.entry[data-id="${entryId}"] .entry-text`);
+  if (!el) return;
+  const ta = document.createElement('textarea');
+  ta.value = entry.text || '';
+  ta.rows = Math.max(2, (entry.text || '').split('\n').length);
+  el.innerHTML = '';
+  el.classList.add('editing');
+  el.appendChild(ta);
+  ta.focus();
+  ta.addEventListener('blur', () => {
+    entry.text = ta.value;
+    save();
+    render();
+  });
+}
+
+/* ────────── Word insertion ────────── */
+function insertWordAtCursor(word) {
+  const editing = document.querySelector('.entry-text.editing textarea');
+  const ta = document.getElementById('in-text');
+  const target = editing || ta;
+  if (!target) return;
+  const start = target.selectionStart ?? target.value.length;
+  const end   = target.selectionEnd   ?? target.value.length;
+  const before = target.value.slice(0, start);
+  const after  = target.value.slice(end);
+  target.value = before + word + after;
+  const newPos = start + word.length;
+  target.focus();
+  target.setSelectionRange(newPos, newPos);
+}
+
+/* ────────── Actions ────────── */
+function moveEntry(idx, dir) {
+  const ni = idx + dir;
+  if (ni < 0 || ni >= S.entries.length) return;
+  const [item] = S.entries.splice(idx, 1);
+  S.entries.splice(ni, 0, item);
+  save(); render();
+}
+function deleteEntry(id) {
+  const idx = S.entries.findIndex(e => e.id === id);
+  if (idx < 0) return;
+  showConfirm('このエントリを削除しますか？', '', () => {
+    S.entries.splice(idx, 1);
+    save(); render();
+  }, { danger: true });
+}
+
+function addEntry() {
+  const text = document.getElementById('in-text').value;
+  const type = S.activeType;
+  if (!text.trim()) {
+    showToast('本文を入力してください', true);
+    return;
+  }
+  const e = type === 'memo'
+    ? { id: uid(), type: 'memo',  text: text }
+    : { id: uid(), type, char: S.activeChar, text: text };
+  S.entries.push(e);
+  document.getElementById('in-text').value = '';
+  save(); render();
+  const wrap = document.getElementById('list-wrap');
+  setTimeout(() => { wrap.scrollTop = wrap.scrollHeight; }, 30);
+}
+
+function addPageMark() {
+  S.entries.push({ id: uid(), type: 'pm' });
+  save(); render();
+  const wrap = document.getElementById('list-wrap');
+  setTimeout(() => { wrap.scrollTop = wrap.scrollHeight; }, 30);
+}
+
+/* ────────── Copy (タイプタグ付きフォーマット) ────────── */
+function buildCopyText() {
+  // [serif]キャラ名 / [mono]キャラ名 / [memo] / [pm]
+  // 各エントリは1行のヘッダ + 本文行群。エントリ間は空行1行で区切る。
+  const blocks = [];
+  for (const e of S.entries) {
+    if (e.type === 'pm') {
+      blocks.push('[pm]');
+      continue;
+    }
+    if (e.type === 'serif') {
+      const head = '[serif]' + (e.char || '');
+      blocks.push(head + (e.text ? '\n' + e.text : ''));
+    } else if (e.type === 'mono') {
+      const head = '[mono]' + (e.char || '');
+      blocks.push(head + (e.text ? '\n' + e.text : ''));
+    } else if (e.type === 'memo') {
+      blocks.push('[memo]' + (e.text ? '\n' + e.text : ''));
+    }
+  }
+  return blocks.join('\n\n');
+}
+
+async function copyToClipboard() {
+  if (S.entries.length === 0) {
+    showToast('コピーするエントリがありません', true);
+    return;
+  }
+  const text = buildCopyText();
+  let ok = false;
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      ok = true;
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+  } catch (e) { ok = false; }
+  if (!ok) { showToast('コピーに失敗しました', true); return; }
+  showToast('コピーしました (' + S.entries.length + '件)');
+
+  if (S.settings.clearAfterCopy === 'always') {
+    setTimeout(() => clearEntries(true), 600);
+  } else if (S.settings.clearAfterCopy === 'ask') {
+    setTimeout(() => {
+      showConfirm('入力済みエントリをクリアしますか？',
+        'コピーは完了しました。残しておくと次回も継ぎ足し可能です。',
+        () => clearEntries(true),
+        { okLabel: 'クリアする', cancelLabel: '残す' });
+    }, 400);
+  }
+}
+
+function clearEntries(skipConfirm) {
+  if (S.entries.length === 0) return;
+  const run = () => {
+    S.entries = [];
+    save(); render();
+    showToast('クリアしました');
+  };
+  if (skipConfirm) { run(); return; }
+  showConfirm('入力済みエントリをすべて削除しますか？',
+    'この操作は元に戻せません。', run, { danger: true });
+}
+
+/* ────────── Toast ────────── */
+let toastTimer = null;
+function showToast(msg, danger) {
+  let t = document.getElementById('toast');
+  if (t) t.remove();
+  t = document.createElement('div');
+  t.id = 'toast';
+  t.className = 'toast' + (danger ? ' danger' : '');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { if (t.parentNode) t.remove(); }, 2000);
+}
+
+/* ────────── Confirm ────────── */
+function showConfirm(title, msg, onOk, opts = {}) {
+  const root = document.getElementById('modal-root');
+  root.innerHTML = '';
+  const mask = document.createElement('div');
+  mask.className = 'mask center';
+  const conf = document.createElement('div');
+  conf.className = 'conf';
+  const okLabel = opts.okLabel || 'OK';
+  const cancelLabel = opts.cancelLabel || 'キャンセル';
+  conf.innerHTML = `
+    <div class="conf-ttl">${escapeHtml(title)}</div>
+    ${msg ? `<div class="conf-msg">${escapeHtml(msg)}</div>` : ''}
+    <div class="conf-ft">
+      <button class="cancel">${escapeHtml(cancelLabel)}</button>
+      <button class="${opts.danger ? 'danger' : 'go'}">${escapeHtml(okLabel)}</button>
+    </div>
+  `;
+  mask.appendChild(conf);
+  root.appendChild(mask);
+  const close = () => root.innerHTML = '';
+  mask.addEventListener('click', (e) => { if (e.target === mask) close(); });
+  conf.querySelector('.cancel').onclick = close;
+  conf.querySelector('.danger, .go').onclick = () => { close(); onOk && onOk(); };
+}
+
+/* ────────── Settings modal ────────── */
+function openSettings(focus) {
+  const root = document.getElementById('modal-root');
+  root.innerHTML = '';
+  const mask = document.createElement('div');
+  mask.className = 'mask';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-hd">
+      <div class="modal-ttl">設定</div>
+      <button class="modal-close" id="m-close">×</button>
+    </div>
+    <div class="modal-body" id="m-body"></div>
+  `;
+  mask.appendChild(modal);
+  root.appendChild(mask);
+
+  document.getElementById('m-close').onclick = () => root.innerHTML = '';
+  mask.addEventListener('click', (e) => { if (e.target === mask) root.innerHTML = ''; });
+
+  renderSettingsBody();
+
+  if (focus === 'chars') {
+    setTimeout(() => {
+      const sec = document.getElementById('sec-chars');
+      if (sec) sec.scrollIntoView({ block:'start' });
+    }, 50);
+  } else if (focus === 'words') {
+    setTimeout(() => {
+      const sec = document.getElementById('sec-words');
+      if (sec) sec.scrollIntoView({ block:'start' });
+    }, 50);
+  }
+}
+
+function renderSettingsBody() {
+  const body = document.getElementById('m-body');
+  if (!body) return;
+  body.innerHTML = `
+    <div class="sec">
+      <div class="sec-ttl">プロジェクト</div>
+      <div class="set-row">
+        <label>名前</label>
+        <input type="text" class="wide" id="set-projname" value="${escapeAttr(S.projectName)}">
+      </div>
+    </div>
+
+    <div class="sec" id="sec-chars">
+      <div class="sec-ttl">話者リスト</div>
+      <div class="sec-desc">登録した名前がチップスで選べます。「なし」（話者未設定）は常に選択肢として表示されます。</div>
+      <div class="item-list" id="char-list"></div>
+      <div class="add-item">
+        <input type="text" id="new-char" placeholder="新しい話者名">
+        <button id="btn-addchar">追加</button>
+      </div>
+    </div>
+
+    <div class="sec" id="sec-words">
+      <div class="sec-ttl">単語登録</div>
+      <div class="sec-desc">タップで入力欄のカーソル位置に挿入されます。フリック入力で出しづらい人名・固有名詞・記号などに。</div>
+      <div class="item-list" id="word-list"></div>
+      <div class="add-item">
+        <input type="text" id="new-word" placeholder="例: 王国名、地名、……、――">
+        <button id="btn-addword">追加</button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-ttl">表示</div>
+      <div class="set-row">
+        <label>テーマ</label>
+        <select id="set-theme">
+          <option value="light">ライト</option>
+          <option value="dark">ダーク</option>
+        </select>
+      </div>
+      <div class="set-row">
+        <label>文字サイズ</label>
+        <select id="set-fontsize">
+          <option value="s">小</option>
+          <option value="m">中</option>
+          <option value="l">大</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-ttl">コピー時の挙動</div>
+      <div class="set-row">
+        <label>コピー後</label>
+        <select id="set-clearafter">
+          <option value="ask">毎回確認</option>
+          <option value="always">常にクリア</option>
+          <option value="never">クリアしない</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-ttl">データ</div>
+      <div class="set-row">
+        <button id="btn-export" style="flex:1">話者・単語をコピー</button>
+        <button id="btn-import" style="flex:1">話者・単語を貼り付け</button>
+      </div>
+      <div class="set-row">
+        <button id="btn-reset" style="flex:1;color:var(--danger);border-color:var(--danger)">全データ初期化</button>
+      </div>
+    </div>
+  `;
+
+  renderCharList();
+  renderWordList();
+
+  const projInput = document.getElementById('set-projname');
+  projInput.addEventListener('input', () => { S.projectName = projInput.value; save(); render(); });
+
+  const themeSel = document.getElementById('set-theme');
+  themeSel.value = S.settings.theme;
+  themeSel.onchange = () => { S.settings.theme = themeSel.value; applyTheme(); save(); };
+
+  const fsSel = document.getElementById('set-fontsize');
+  fsSel.value = S.settings.fontSize;
+  fsSel.onchange = () => { S.settings.fontSize = fsSel.value; applyTheme(); save(); };
+
+  const caSel = document.getElementById('set-clearafter');
+  caSel.value = S.settings.clearAfterCopy;
+  caSel.onchange = () => { S.settings.clearAfterCopy = caSel.value; save(); };
+
+  document.getElementById('btn-addchar').onclick = () => {
+    const inp = document.getElementById('new-char');
+    const name = inp.value.trim();
+    if (!name) return;
+    if (S.chars.includes(name)) { showToast('同名の話者が既にあります', true); return; }
+    S.chars.push(name);
+    if (!S.activeChar) S.activeChar = name;
+    inp.value = '';
+    save(); render(); renderCharList();
+  };
+  document.getElementById('new-char').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-addchar').click(); }
+  });
+
+  document.getElementById('btn-addword').onclick = () => {
+    const inp = document.getElementById('new-word');
+    const w = inp.value; // 単語は空白も意味ある場合があるのでtrimしない
+    if (!w) return;
+    if (S.words.includes(w)) { showToast('同じ単語が既にあります', true); return; }
+    S.words.push(w);
+    inp.value = '';
+    save(); render(); renderWordList();
+  };
+  document.getElementById('new-word').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-addword').click(); }
+  });
+
+  document.getElementById('btn-export').onclick = exportJson;
+  document.getElementById('btn-import').onclick = importJson;
+  document.getElementById('btn-reset').onclick = () => {
+    showConfirm('すべてのデータを初期化しますか？',
+      '話者・単語・エントリ・設定がすべて削除されます。', () => {
+      S = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      save(); applyTheme(); render();
+      document.getElementById('modal-root').innerHTML = '';
+      showToast('初期化しました');
+    }, { danger: true, okLabel: '初期化する' });
+  };
+}
+
+function renderCharList() {
+  const list = document.getElementById('char-list');
+  if (!list) return;
+  list.innerHTML = '';
+  if (S.chars.length === 0) {
+    const e = document.createElement('div');
+    e.style.cssText = 'color:var(--text-mute);font-size:13px;text-align:center;padding:8px;';
+    e.textContent = '話者が登録されていません';
+    list.appendChild(e);
+    return;
+  }
+  S.chars.forEach((name, idx) => {
+    list.appendChild(buildItemRow(name, idx, S.chars, {
+      onMove: (i, dir) => {
+        const ni = i + dir;
+        if (ni < 0 || ni >= S.chars.length) return;
+        const [it] = S.chars.splice(i, 1);
+        S.chars.splice(ni, 0, it);
+        save(); render(); renderCharList();
+      },
+      onChange: (newName, oldName) => {
+        for (const e of S.entries) {
+          if ((e.type === 'serif' || e.type === 'mono') && e.char === oldName) e.char = newName;
+        }
+        if (S.activeChar === oldName) S.activeChar = newName;
+      },
+      onDelete: (name, idx) => {
+        showConfirm(`話者「${name}」を削除しますか？`,
+          'この話者を使用しているエントリは話者なしになります。', () => {
+          for (const e of S.entries) {
+            if ((e.type === 'serif' || e.type === 'mono') && e.char === name) e.char = '';
+          }
+          if (S.activeChar === name) S.activeChar = '';
+          S.chars.splice(idx, 1);
+          save(); render(); renderCharList();
+        }, { danger: true });
+      },
+    }));
+  });
+}
+
+function renderWordList() {
+  const list = document.getElementById('word-list');
+  if (!list) return;
+  list.innerHTML = '';
+  if (S.words.length === 0) {
+    const e = document.createElement('div');
+    e.style.cssText = 'color:var(--text-mute);font-size:13px;text-align:center;padding:8px;';
+    e.textContent = '単語が登録されていません';
+    list.appendChild(e);
+    return;
+  }
+  S.words.forEach((w, idx) => {
+    list.appendChild(buildItemRow(w, idx, S.words, {
+      onMove: (i, dir) => {
+        const ni = i + dir;
+        if (ni < 0 || ni >= S.words.length) return;
+        const [it] = S.words.splice(i, 1);
+        S.words.splice(ni, 0, it);
+        save(); render(); renderWordList();
+      },
+      onChange: () => {},
+      onDelete: (_w, idx) => {
+        S.words.splice(idx, 1);
+        save(); render(); renderWordList();
+      },
+      noTrim: true,
+    }));
+  });
+}
+
+function buildItemRow(value, idx, arr, handlers) {
+  const row = document.createElement('div');
+  row.className = 'item-row';
+
+  const up = document.createElement('button');
+  up.className = 'item-btn';
+  up.textContent = '▲';
+  up.disabled = idx === 0;
+  if (up.disabled) up.style.opacity = '.3';
+  up.onclick = () => handlers.onMove(idx, -1);
+  row.appendChild(up);
+
+  const down = document.createElement('button');
+  down.className = 'item-btn';
+  down.textContent = '▼';
+  down.disabled = idx === arr.length - 1;
+  if (down.disabled) down.style.opacity = '.3';
+  down.onclick = () => handlers.onMove(idx, 1);
+  row.appendChild(down);
+
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.value = value;
+  inp.addEventListener('change', () => {
+    const v = handlers.noTrim ? inp.value : inp.value.trim();
+    if (!v) { inp.value = value; return; }
+    if (arr.includes(v) && v !== value) {
+      showToast('同じ項目が既にあります', true);
+      inp.value = value; return;
+    }
+    handlers.onChange(v, value);
+    arr[idx] = v;
+    save(); render();
+    if (arr === S.chars) renderCharList();
+    else if (arr === S.words) renderWordList();
+  });
+  row.appendChild(inp);
+
+  const del = document.createElement('button');
+  del.className = 'item-btn del';
+  del.textContent = '×';
+  del.onclick = () => handlers.onDelete(value, idx);
+  row.appendChild(del);
+
+  return row;
+}
+
+/* ────────── 話者・単語の JSON コピー / 貼り付け ────────── */
+// 話者リストと単語辞典のみを対象に、クリップボード経由でやり取りする。
+// entries・設定・プロジェクト名は対象外（端末ローカル管理）。
+async function exportJson() {
+  const payload = {
+    chars: S.chars.slice(),
+    words: S.words.slice(),
+  };
+  const text = JSON.stringify(payload, null, 2);
+  let ok = false;
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      ok = true;
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+  } catch (e) { ok = false; }
+  if (!ok) { showToast('コピーに失敗しました', true); return; }
+  showToast(`話者${S.chars.length}件・単語${S.words.length}件をコピーしました`);
+}
+
+function importJson() {
+  // 貼り付け用モーダル
+  const root = document.getElementById('modal-root');
+  const prev = root.innerHTML;
+  root.innerHTML = '';
+  const mask = document.createElement('div');
+  mask.className = 'mask';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-hd">
+      <div class="modal-ttl">話者・単語を貼り付け</div>
+      <button class="modal-close" id="ip-close">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="sec">
+        <div class="sec-desc">Discord等に保管したJSONをここに貼り付けてください。フォーマット: <code>{ "chars": [...], "words": [...] }</code></div>
+        <textarea id="ip-text" rows="8" placeholder='{"chars":["田中 誠","桜井 遥"],"words":["王国名","……"]}' style="width:100%;min-height:160px;font-family:'Consolas',monospace;font-size:13px;"></textarea>
+      </div>
+      <div class="sec">
+        <div class="sec-ttl">読み込み方法</div>
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:14px;color:var(--text-sub);cursor:pointer;">
+          <input type="radio" name="ip-mode" value="replace" checked> 上書き（既存の話者・単語をすべて置き換え）
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:14px;color:var(--text-sub);cursor:pointer;">
+          <input type="radio" name="ip-mode" value="merge"> マージ（既存に追加、重複は無視）
+        </label>
+      </div>
+      <div class="sec" style="display:flex;gap:8px;justify-content:flex-end;">
+        <button id="ip-cancel" style="min-width:80px;">キャンセル</button>
+        <button id="ip-go" style="min-width:100px;background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;">読み込む</button>
+      </div>
+    </div>
+  `;
+  mask.appendChild(modal);
+  root.appendChild(mask);
+
+  const close = () => { root.innerHTML = prev; };
+  document.getElementById('ip-close').onclick = close;
+  document.getElementById('ip-cancel').onclick = close;
+  mask.addEventListener('click', (e) => { if (e.target === mask) close(); });
+
+  document.getElementById('ip-go').onclick = () => {
+    const text = document.getElementById('ip-text').value.trim();
+    if (!text) { showToast('JSONを貼り付けてください', true); return; }
+    let d;
+    try { d = JSON.parse(text); }
+    catch { showToast('JSONの形式が不正です', true); return; }
+    if (!d || typeof d !== 'object') { showToast('JSONの形式が不正です', true); return; }
+    const inChars = Array.isArray(d.chars) ? d.chars.filter(s => typeof s === 'string') : [];
+    const inWords = Array.isArray(d.words) ? d.words.filter(s => typeof s === 'string') : [];
+    if (inChars.length === 0 && inWords.length === 0) {
+      showToast('chars/wordsが空または見つかりません', true);
+      return;
+    }
+
+    const mode = document.querySelector('input[name="ip-mode"]:checked').value;
+
+    const apply = () => {
+      if (mode === 'replace') {
+        S.chars = inChars.slice();
+        S.words = inWords.slice();
+        // 既存entriesで失われた話者を使っているものは話者なしへ
+        for (const e of S.entries) {
+          if ((e.type === 'serif' || e.type === 'mono') && e.char && !S.chars.includes(e.char)) {
+            e.char = '';
+          }
+        }
+        if (S.activeChar && !S.chars.includes(S.activeChar)) S.activeChar = '';
+      } else {
+        // merge: 既存に追加、重複skip
+        for (const c of inChars) if (!S.chars.includes(c)) S.chars.push(c);
+        for (const w of inWords) if (!S.words.includes(w)) S.words.push(w);
+      }
+      save(); render();
+      // 設定モーダルの該当セクションだけ再描画
+      const charListEl = document.getElementById('char-list');
+      const wordListEl = document.getElementById('word-list');
+      if (charListEl) renderCharList();
+      if (wordListEl) renderWordList();
+      close();
+      showToast(`${mode === 'replace' ? '上書き' : 'マージ'}しました（話者${inChars.length}件・単語${inWords.length}件）`);
+    };
+
+    if (mode === 'replace' && (S.chars.length > 0 || S.words.length > 0)) {
+      showConfirm('上書きしますか？',
+        `現在の話者${S.chars.length}件・単語${S.words.length}件が削除され、貼り付けた内容（話者${inChars.length}件・単語${inWords.length}件）に置き換わります。`,
+        apply, { danger: true, okLabel: '上書きする' });
+    } else {
+      apply();
+    }
+  };
+
+  setTimeout(() => document.getElementById('ip-text').focus(), 50);
+}
+
+/* ────────── Utils ────────── */
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => (
+    { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+  ));
+}
+function escapeAttr(s) { return escapeHtml(s); }
+
+/* ────────── Boot ────────── */
+function init() {
+  load();
+  applyTheme();
+  render();
+
+  document.getElementById('btn-settings').onclick = () => openSettings();
+  document.getElementById('btn-add').onclick = addEntry;
+  document.getElementById('btn-pm').onclick = addPageMark;
+  document.getElementById('btn-copy').onclick = copyToClipboard;
+  document.getElementById('btn-clear').onclick = () => clearEntries(false);
+  document.getElementById('word-toggle').onclick = () => {
+    S.wordsExpanded = !S.wordsExpanded;
+    save(); renderWordRow();
+  };
+
+  document.querySelectorAll('.type-btn').forEach(b => {
+    b.onclick = () => { S.activeType = b.dataset.type; save(); render(); };
+  });
+
+  document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+  window.addEventListener('beforeunload', save);
+}
+
+init();
+</script>
+</body>
+</html>
