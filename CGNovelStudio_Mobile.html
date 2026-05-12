@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   CG Novel Studio Mobile
-  Version: 0.4.3
+  Version: 0.4.4
   Last updated: 2026-05-12
   外出先でスマホからセリフ案を入力 → PCのCG Novel Studioへ貼り付け取り込みする想定の入力専用ツール。
 -->
@@ -732,7 +732,10 @@ function insertWordAtCursor(word) {
   const after  = target.value.slice(end);
   target.value = before + word + after;
   const newPos = start + word.length;
-  target.focus();
+  // 既にフォーカスが当たっている場合はfocus()を呼ばない（iOSの自動スクロール防止）
+  if (document.activeElement !== target) {
+    try { target.focus({ preventScroll: true }); } catch { target.focus(); }
+  }
   target.setSelectionRange(newPos, newPos);
 }
 
@@ -1377,8 +1380,18 @@ function init() {
   document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
   window.addEventListener('beforeunload', save);
 
+  // 入力欄からフォーカスを奪わないボタン群（イベントデリゲーション）。
+  // mousedownでpreventDefaultするとフォーカスが移動しない（clickは通常通り発火）。
+  // これによりキーボードが閉じず、keyboard-openクラスも維持される。
+  const noStealSelector = '.chip, .word-chip, .type-btn, .add-btn, .pm-btn, .entry-actions button';
+  document.addEventListener('mousedown', (e) => {
+    if (e.target.closest(noStealSelector)) e.preventDefault();
+  });
+  document.addEventListener('touchstart', (e) => {
+    if (e.target.closest(noStealSelector)) e.preventDefault();
+  }, { passive: false });
+
   // キーボード表示の検知（テキスト系入力にフォーカスしたら .keyboard-open を付与）
-  // 設定モーダル内の入力にも反応するが、act-rowはモーダルの裏にあるので無害
   document.addEventListener('focusin', (e) => {
     const t = e.target;
     if (t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && t.type !== 'radio' && t.type !== 'checkbox' && t.type !== 'button'))) {
