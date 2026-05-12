@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   CG Novel Studio Mobile
-  Version: 0.4.1
+  Version: 0.4.2
   Last updated: 2026-05-12
   外出先でスマホからセリフ案を入力 → PCのCG Novel Studioへ貼り付け取り込みする想定の入力専用ツール。
 -->
@@ -402,6 +402,33 @@ body.keyboard-open .act-row { display: none; }
 .add-item button {
   background: var(--ok-bg); border-color: var(--ok);
   color: var(--ok); font-weight: 600; flex-shrink: 0;
+}
+
+/* JSON import modal: radio options */
+.ip-opt {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: var(--bg-panel); border: 1.5px solid var(--line);
+  border-radius: 6px; padding: 10px 12px;
+  cursor: pointer;
+}
+.ip-opt:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+.ip-opt input[type="radio"] {
+  flex-shrink: 0;
+  width: 18px; height: 18px;
+  margin-top: 1px;
+  accent-color: var(--accent);
+}
+.ip-opt-text {
+  flex: 1; display: flex; flex-direction: column; gap: 2px;
+}
+.ip-opt-title {
+  font-size: 14px; font-weight: 700; color: var(--text);
+}
+.ip-opt-desc {
+  font-size: 12px; color: var(--text-sub); line-height: 1.4;
 }
 
 /* Toast */
@@ -1221,10 +1248,13 @@ async function exportJson() {
 }
 
 function importJson() {
-  // 貼り付け用モーダル
+  // 貼り付け用モーダル。
+  // 設定モーダルから呼ばれることが多いので、設定モーダルをDOMノードとして退避し、
+  // 戻る時にappendChildで再挿入する。innerHTML文字列での退避はイベントリスナーが消える。
   const root = document.getElementById('modal-root');
-  const prev = root.innerHTML;
-  root.innerHTML = '';
+  const prevModal = root.firstElementChild;
+  if (prevModal) root.removeChild(prevModal);
+
   const mask = document.createElement('div');
   mask.className = 'mask';
   const modal = document.createElement('div');
@@ -1232,32 +1262,48 @@ function importJson() {
   modal.innerHTML = `
     <div class="modal-hd">
       <div class="modal-ttl">話者・単語を貼り付け</div>
-      <button class="modal-close" id="ip-close">×</button>
+      <button class="modal-close" id="ip-close" aria-label="閉じる">×</button>
     </div>
     <div class="modal-body">
       <div class="sec">
-        <div class="sec-desc">Discord等に保管したJSONをここに貼り付けてください。フォーマット: <code>{ "chars": [...], "words": [...] }</code></div>
-        <textarea id="ip-text" rows="8" placeholder='{"chars":["田中 誠","桜井 遥"],"words":["王国名","……"]}' style="width:100%;min-height:160px;font-family:'Consolas',monospace;font-size:13px;"></textarea>
+        <div class="sec-desc">Discord等に保管したJSONをここに貼り付けてください。<br>フォーマット: <code style="font-family:'Consolas',monospace;font-size:12px;">{ "chars": [...], "words": [...] }</code></div>
+        <textarea id="ip-text" rows="6" placeholder='{"chars":["田中 誠","桜井 遥"],"words":["王国名","……"]}'
+          style="width:100%;min-height:140px;font-family:'Consolas',monospace;line-height:1.5;resize:vertical;"></textarea>
       </div>
+
       <div class="sec">
         <div class="sec-ttl">読み込み方法</div>
-        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:14px;color:var(--text-sub);cursor:pointer;">
-          <input type="radio" name="ip-mode" value="replace" checked> 上書き（既存の話者・単語をすべて置き換え）
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:14px;color:var(--text-sub);cursor:pointer;">
-          <input type="radio" name="ip-mode" value="merge"> マージ（既存に追加、重複は無視）
-        </label>
+        <div class="item-list">
+          <label class="ip-opt">
+            <input type="radio" name="ip-mode" value="replace" checked>
+            <span class="ip-opt-text">
+              <span class="ip-opt-title">上書き</span>
+              <span class="ip-opt-desc">既存の話者・単語をすべて置き換え</span>
+            </span>
+          </label>
+          <label class="ip-opt">
+            <input type="radio" name="ip-mode" value="merge">
+            <span class="ip-opt-text">
+              <span class="ip-opt-title">マージ</span>
+              <span class="ip-opt-desc">既存に追加、重複は無視</span>
+            </span>
+          </label>
+        </div>
       </div>
-      <div class="sec" style="display:flex;gap:8px;justify-content:flex-end;">
-        <button id="ip-cancel" style="min-width:80px;">キャンセル</button>
-        <button id="ip-go" style="min-width:100px;background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;">読み込む</button>
+
+      <div class="sec" style="display:flex;gap:8px;margin-top:8px;margin-bottom:0;">
+        <button id="ip-cancel" style="flex:1;padding:12px;">キャンセル</button>
+        <button id="ip-go" style="flex:1;padding:12px;background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;">読み込む</button>
       </div>
     </div>
   `;
   mask.appendChild(modal);
   root.appendChild(mask);
 
-  const close = () => { root.innerHTML = prev; };
+  const close = () => {
+    root.innerHTML = '';
+    if (prevModal) root.appendChild(prevModal);
+  };
   document.getElementById('ip-close').onclick = close;
   document.getElementById('ip-cancel').onclick = close;
   mask.addEventListener('click', (e) => { if (e.target === mask) close(); });
@@ -1282,7 +1328,6 @@ function importJson() {
       if (mode === 'replace') {
         S.chars = inChars.slice();
         S.words = inWords.slice();
-        // 既存entriesで失われた話者を使っているものは話者なしへ
         for (const e of S.entries) {
           if ((e.type === 'serif' || e.type === 'mono') && e.char && !S.chars.includes(e.char)) {
             e.char = '';
@@ -1290,17 +1335,16 @@ function importJson() {
         }
         if (S.activeChar && !S.chars.includes(S.activeChar)) S.activeChar = '';
       } else {
-        // merge: 既存に追加、重複skip
         for (const c of inChars) if (!S.chars.includes(c)) S.chars.push(c);
         for (const w of inWords) if (!S.words.includes(w)) S.words.push(w);
       }
       save(); render();
-      // 設定モーダルの該当セクションだけ再描画
+      close();
+      // close()後はprevModalが復活しているので、その中のリストを再描画
       const charListEl = document.getElementById('char-list');
       const wordListEl = document.getElementById('word-list');
       if (charListEl) renderCharList();
       if (wordListEl) renderWordList();
-      close();
       showToast(`${mode === 'replace' ? '上書き' : 'マージ'}しました（話者${inChars.length}件・単語${inWords.length}件）`);
     };
 
@@ -1312,8 +1356,6 @@ function importJson() {
       apply();
     }
   };
-
-  setTimeout(() => document.getElementById('ip-text').focus(), 50);
 }
 
 /* ────────── Utils ────────── */
