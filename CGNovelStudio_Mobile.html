@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   CG Novel Studio Mobile
-  Version: 0.4.0
+  Version: 0.4.1
   Last updated: 2026-05-12
   外出先でスマホからセリフ案を入力 → PCのCG Novel Studioへ貼り付け取り込みする想定の入力専用ツール。
 -->
@@ -115,7 +115,9 @@ body {
   color: var(--text);
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
+  color-scheme: light;
 }
+[data-theme="dark"] body { color-scheme: dark; }
 input, textarea, button, select { font-family: inherit; color: inherit; }
 button, select { font-size: inherit; }
 /* 入力要素はiOSの自動ズーム防止のため16pxを必ず維持 */
@@ -324,6 +326,8 @@ button:active { background: var(--bg-elev); }
 
 /* Action bar */
 .act-row { display: flex; gap: 6px; margin-top: 1px; }
+/* キーボード表示中は使わないので隠して下部パネルを縮める */
+body.keyboard-open .act-row { display: none; }
 .act-btn {
   flex: 1; font-size: 12px; padding: 5px; min-height: 30px;
   background: var(--bg-panel); color: var(--text-sub);
@@ -1342,6 +1346,27 @@ function init() {
 
   document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
   window.addEventListener('beforeunload', save);
+
+  // キーボード表示の検知（テキスト系入力にフォーカスしたら .keyboard-open を付与）
+  // 設定モーダル内の入力にも反応するが、act-rowはモーダルの裏にあるので無害
+  document.addEventListener('focusin', (e) => {
+    const t = e.target;
+    if (t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && t.type !== 'radio' && t.type !== 'checkbox' && t.type !== 'button'))) {
+      document.body.classList.add('keyboard-open');
+    }
+  });
+  document.addEventListener('focusout', (e) => {
+    const t = e.target;
+    if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT')) {
+      // フォーカスが別の入力に移った可能性があるので一拍置いて確認
+      setTimeout(() => {
+        const a = document.activeElement;
+        if (!a || (a.tagName !== 'TEXTAREA' && a.tagName !== 'INPUT')) {
+          document.body.classList.remove('keyboard-open');
+        }
+      }, 100);
+    }
+  });
 }
 
 init();
