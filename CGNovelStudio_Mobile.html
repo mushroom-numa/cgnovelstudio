@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   CG Novel Studio Mobile
-  Version: 0.4.4
+  Version: 0.4.5
   Last updated: 2026-05-12
   外出先でスマホからセリフ案を入力 → PCのCG Novel Studioへ貼り付け取り込みする想定の入力専用ツール。
 -->
@@ -1380,21 +1380,12 @@ function init() {
   document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
   window.addEventListener('beforeunload', save);
 
-  // 入力欄からフォーカスを奪わないボタン群（イベントデリゲーション）。
-  // mousedownでpreventDefaultするとフォーカスが移動しない（clickは通常通り発火）。
-  // これによりキーボードが閉じず、keyboard-openクラスも維持される。
-  const noStealSelector = '.chip, .word-chip, .type-btn, .add-btn, .pm-btn, .entry-actions button';
-  document.addEventListener('mousedown', (e) => {
-    if (e.target.closest(noStealSelector)) e.preventDefault();
-  });
-  document.addEventListener('touchstart', (e) => {
-    if (e.target.closest(noStealSelector)) e.preventDefault();
-  }, { passive: false });
-
-  // キーボード表示の検知（テキスト系入力にフォーカスしたら .keyboard-open を付与）
+  // 入力欄のフォーカスを記憶（ボタンタップ後の復帰用）
+  let lastFocusedInput = null;
   document.addEventListener('focusin', (e) => {
     const t = e.target;
-    if (t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && t.type !== 'radio' && t.type !== 'checkbox' && t.type !== 'button'))) {
+    if (t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !['radio','checkbox','button','file','submit','reset'].includes(t.type)))) {
+      lastFocusedInput = t;
       document.body.classList.add('keyboard-open');
     }
   });
@@ -1409,6 +1400,36 @@ function init() {
         }
       }, 100);
     }
+  });
+
+  // 入力補助ボタン: PCではmousedownのpreventDefaultでフォーカス奪取を防ぐ。
+  // iOS Safariはtouchstart.preventDefaultするとclick自体が消えるので、touchには触れない。
+  const noStealSelector = '.chip, .word-chip, .type-btn, .add-btn, .pm-btn';
+  document.addEventListener('mousedown', (e) => {
+    if (e.target.closest(noStealSelector)) e.preventDefault();
+  });
+
+  // click後、入力欄からフォーカスが外れていたら戻す（iOS向けの保険）。
+  // keyboard-open中のみ復帰させる（閲覧モードで意図せず入力欄に飛ばないように）。
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest(noStealSelector)) return;
+    if (!lastFocusedInput) return;
+    // lastFocusedInputがDOMから消えている（編集中textareaが消えた等）場合は in-text を使う
+    let target = document.body.contains(lastFocusedInput) ? lastFocusedInput : document.getElementById('in-text');
+    if (!target) return;
+    // フォーカスが既に入力にあるなら何もしない
+    const a = document.activeElement;
+    if (a === target) return;
+    if (a && (a.tagName === 'TEXTAREA' || a.tagName === 'INPUT')) return;
+    // 復帰
+    setTimeout(() => {
+      try { target.focus({ preventScroll: true }); } catch { target.focus(); }
+      // カーソル位置を末尾に
+      if (typeof target.value === 'string') {
+        const end = target.value.length;
+        try { target.setSelectionRange(end, end); } catch {}
+      }
+    }, 0);
   });
 }
 
